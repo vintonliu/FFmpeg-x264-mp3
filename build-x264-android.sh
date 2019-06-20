@@ -1,72 +1,95 @@
 #!/bin/sh
+
+ANDROID_NDK_ROOT=/Users/51talk/android-ndk-r17c
 if [ ! -d "${ANDROID_NDK_ROOT}" ];then
 echo error,no ANDROID_NDK_ROOT,set ANDROID_NDK_ROOT to NDK path
 exit 1
 fi
 
 ROOT=`pwd`
-OUTPUT_INSTALL="$ROOT/android/x264/install"
-rm -rf $ROOT/android/x264
+SOURCE="x264"
+PROJECT=x264
+X264_PATH="$ROOT/$SOURCE"
+
+OUTPUT_OBJECT="$ROOT/android/$PROJECT/object"
+OUTPUT_INSTALL="$ROOT/android/$PROJECT/install"
+
+# Remove old build and installation files.
+rm -rf $ROOT/android/$PROJECT
+
+mkdir -p $OUTPUT_OBJECT
+mkdir -p $OUTPUT_INSTALL
 
 if [ $# = 1 ]
 then
 	ARCHS="$1"
 else
-	ARCHS="arm arm64 mipsel x86 x86_64"
+	ARCHS="arm arm64 x86 x86_64"
 fi
 
 echo "ARCHS = $ARCHS"
 
-TARGET_API=android-21
+API=23
 
-# ARCHS="arm"
-cd x264/
+# cd x264/
 for ARCH in $ARCHS; do
 	echo "Building x264 for $ARCH ......"
-	HOST=$ARCH-linux	
-	PLATFORM_ROOT=$ANDROID_NDK_ROOT/platforms/$TARGET_API/arch-$ARCH
+	mkdir -p "$OUTPUT_OBJECT/$ARCH"
+	cd "$OUTPUT_OBJECT/$ARCH"
 
-	if [ "$ARCH" = "arm64" ]
-	then
-		HOST=aarch64-linux
-		PREBUILT=$ANDROID_NDK_ROOT/toolchains/$HOST-android-4.9/prebuilt
-	elif [ "$ARCH" = "mipsel" ]
-	then
-		PREBUILT=$ANDROID_NDK_ROOT/toolchains/$HOST-android-4.9/prebuilt
-		PLATFORM_ROOT=$ANDROID_NDK_ROOT/platforms/$TARGET_API/arch-mips
-		DISABLE_ASM=--disable-asm
-	elif [ "$ARCH" = "x86" ]
-	then
-		HOST=i686-linux
-		PREBUILT=$ANDROID_NDK_ROOT/toolchains/x86-4.9/prebuilt
-		DISABLE_ASM=--disable-asm
-	elif [ "$ARCH" = "x86_64" ]
-	then
-		PREBUILT=$ANDROID_NDK_ROOT/toolchains/x86_64-4.9/prebuilt
-		DISABLE_ASM=--disable-asm
-	fi
+	SYSROOT=$ANDROID_NDK_ROOT/platforms/android-$API/arch-$ARCH
+	ISYSROOT=$ANDROID_NDK_ROOT/sysroot
+	MARCH=
 
 	if [ "$ARCH" = "arm" ]
 	then
-		PREBUILT=$ANDROID_NDK_ROOT/toolchains/$ARCH-linux-androideabi-4.9/prebuilt
-		CROSS_PREFIX=$PREBUILT/darwin-x86_64/bin/$HOST-androideabi-
-		DISABLE_ASM=
-	else
-		CROSS_PREFIX=$PREBUILT/darwin-x86_64/bin/$HOST-android-
+		HOST=arm-linux-androideabi
+		PREBUILT=$ANDROID_NDK_ROOT/toolchains/arm-linux-androideabi-4.9/prebuilt/darwin-x86_64
+		CROSS_PREFIX=$PREBUILT/bin/arm-linux-androideabi-
+		MARCH="-march=armv7-a"
+	elif [ "$ARCH" = "arm64" ]
+	then
+		HOST=aarch64-linux-android
+		PREBUILT=$ANDROID_NDK_ROOT/toolchains/$HOST-4.9/prebuilt/darwin-x86_64
+		CROSS_PREFIX=$PREBUILT/bin/aarch64-linux-android-
+	elif [ "$ARCH" = "mipsel" ]
+	then
+		HOST=mipsel-linux-android
+		DISABLE_ASM=--disable-asm
+		PREBUILT=$ANDROID_NDK_ROOT/toolchains/$HOST-4.9/prebuilt/darwin-x86_64
+		SYSROOT=$ANDROID_NDK_ROOT/platforms/android-$API/arch-mips
+		CROSS_PREFIX=$PREBUILT/bin/mipsel-linux-android-
+	elif [ "$ARCH" = "x86" ]
+	then
+		HOST=i686-linux-android
+		DISABLE_ASM=--disable-asm
+		PREBUILT=$ANDROID_NDK_ROOT/toolchains/x86-4.9/prebuilt/darwin-x86_64
+		CROSS_PREFIX=$PREBUILT/bin/i686-linux-android-
+	elif [ "$ARCH" = "x86_64" ]
+	then
+		HOST=x86_64-linux-android
+		DISABLE_ASM=--disable-asm
+		PREBUILT=$ANDROID_NDK_ROOT/toolchains/x86_64-4.9/prebuilt/darwin-x86_64
+		CROSS_PREFIX=$PREBUILT/bin/x86_64-linux-android-
 	fi
+	
+	ECFLAGS="--sysroot=$ISYSROOT -isystem $ISYSROOT/usr/include/$HOST -D__ANDROID_API__=$API -D__ANDROID__ -DANDROID"
+	ELDFLAGS="--sysroot=$SYSROOT -L$SYSROOT/usr/lib"
 
-    mkdir -p $OUTPUT_INSTALL/$ARCH
-	./configure --prefix=$OUTPUT_INSTALL/$ARCH \
+	$X264_PATH/configure --prefix="$OUTPUT_INSTALL/$ARCH" \
 						 --enable-static \
 						 --enable-pic \
-						 --host=$HOST\
+						 --host=$HOST \
 						 --cross-prefix=$CROSS_PREFIX \
-						 --sysroot=$PLATFORM_ROOT \
+						 --extra-cflags="$ECFLAGS" \
+						 --extra-ldflags="$ELDFLAGS" \
 						 --disable-opencl \
-						 $DISABLE_ASM
+						 $DISABLE_ASM \
+						 || exit 1
 
 
-    make && make install && make clean
+    make && make install && make distclean
     echo "Installed: $OUTPUT_INSTALL/$ARCH"
 done
 
+cd $ROOT
