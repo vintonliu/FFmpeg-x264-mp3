@@ -14968,9 +14968,9 @@ fi
 done
 
 
-if test "X${ac_cv_func_strtol}" != "Xyes"; then
-	as_fn_error $? "function strtol is mandatory" "$LINENO" 5
-fi
+# if test "X${ac_cv_func_strtol}" != "Xyes"; then
+# 	as_fn_error $? "function strtol is mandatory" "$LINENO" 5
+# fi
 
 SOCKETFUNCTION=unknown
 for ac_func in socket
