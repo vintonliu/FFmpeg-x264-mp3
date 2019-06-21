@@ -1,0 +1,14 @@
+prefix=/Users/51talk/Desktop/Vinton/github/ffmpeg/FFmpeg-x264-mp3-build-script/build/android/ffmpeg/install/armeabi
+exec_prefix=${prefix}
+libdir=/Users/51talk/Desktop/Vinton/github/ffmpeg/FFmpeg-x264-mp3-build-script/build/android/ffmpeg/install/armeabi/lib
+includedir=/Users/51talk/Desktop/Vinton/github/ffmpeg/FFmpeg-x264-mp3-build-script/build/android/ffmpeg/install/armeabi/include
+
+Name: libavfilter
+Description: FFmpeg audio/video filtering library
+Version: 7.40.101
+Requires: 
+Requires.private: libavutil >= 56.22.100
+Conflicts:
+Libs: -L${libdir}  -lavfilter 
+Libs.private: -pthread -lm
+Cflags: -I${includedir}

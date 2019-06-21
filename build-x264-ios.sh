@@ -5,18 +5,17 @@ CONFIGURE_FLAGS="--enable-static --enable-pic --disable-cli --disable-asm"
 ARCHS="arm64 x86_64 armv7"
 
 # directories
-#Lib install dir.
+# Lib install dir.
 ROOT=`pwd`
-PLATFORM=iOS
 SOURCE="x264"
 PROJECT=x264
 X264_PATH="$ROOT/$SOURCE"
 
-OUTPUT_OBJECT="$ROOT/$PLATFORM/$PROJECT/object"
-OUTPUT_INSTALL="$ROOT/$PLATFORM/$PROJECT/install"
+OUTPUT_OBJECT="$ROOT/build/iOS/$PROJECT/object"
+OUTPUT_INSTALL="$ROOT/build/iOS/$PROJECT/install"
 
 # Remove old build and installation files.
-rm -rf $ROOT/$PLATFORM/$PROJECT
+rm -rf $ROOT/build/iOS/$PROJECT
 
 mkdir -p $OUTPUT_OBJECT
 mkdir -p $OUTPUT_INSTALL

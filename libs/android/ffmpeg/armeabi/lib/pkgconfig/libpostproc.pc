@@ -1,0 +1,14 @@
+prefix=/Users/51talk/Desktop/Vinton/github/ffmpeg/FFmpeg-x264-mp3-build-script/build/android/ffmpeg/install/armeabi
+exec_prefix=${prefix}
+libdir=/Users/51talk/Desktop/Vinton/github/ffmpeg/FFmpeg-x264-mp3-build-script/build/android/ffmpeg/install/armeabi/lib
+includedir=/Users/51talk/Desktop/Vinton/github/ffmpeg/FFmpeg-x264-mp3-build-script/build/android/ffmpeg/install/armeabi/include
+
+Name: libpostproc
+Description: FFmpeg postprocessing library
+Version: 55.3.100
+Requires: 
+Requires.private: libavutil >= 56.22.100
+Conflicts:
+Libs: -L${libdir}  -lpostproc 
+Libs.private: -lm
+Cflags: -I${includedir}

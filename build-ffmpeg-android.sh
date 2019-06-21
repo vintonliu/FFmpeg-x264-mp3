@@ -10,10 +10,10 @@ fi
 ROOT=`pwd`
 SOURCE="ffmpeg"
 
-OUTPUT_OBJECT="$ROOT/android/FFmpeg/object"
-OUTPUT_INSTALL="$ROOT/android/FFmpeg/install"
+OUTPUT_OBJECT="$ROOT/build/android/FFmpeg/object"
+OUTPUT_INSTALL="$ROOT/build/android/FFmpeg/install"
 FFMPEG_PATH="$ROOT/$SOURCE"
-rm -rf $ROOT/android/FFmpeg
+rm -rf $ROOT/build/android/FFmpeg
 
 mkdir -p $OUTPUT_OBJECT
 mkdir -p $OUTPUT_INSTALL

@@ -11,11 +11,11 @@ SOURCE="x264"
 PROJECT=x264
 X264_PATH="$ROOT/$SOURCE"
 
-OUTPUT_OBJECT="$ROOT/android/$PROJECT/object"
-OUTPUT_INSTALL="$ROOT/android/$PROJECT/install"
+OUTPUT_OBJECT="$ROOT/build/android/$PROJECT/object"
+OUTPUT_INSTALL="$ROOT/build/android/$PROJECT/install"
 
 # Remove old build and installation files.
-rm -rf $ROOT/android/$PROJECT
+rm -rf $ROOT/build/android/$PROJECT
 
 mkdir -p $OUTPUT_OBJECT
 mkdir -p $OUTPUT_INSTALL

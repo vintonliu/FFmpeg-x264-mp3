@@ -15,7 +15,6 @@ echo "no mp3lame lib,start to build mp3lame"
 fi
 
 ROOT=`pwd`
-PLATFORM=iOS
 SOURCE="ffmpeg"
 PROJECT=ffmpeg
 FFMPEG_PATH="$ROOT/$SOURCE"
@@ -23,14 +22,14 @@ FFMPEG_PATH="$ROOT/$SOURCE"
 ARCHS="arm64 armv7 x86_64"
 
 # absolute path to x264 library
-X264="$ROOT/$PLATFORM/x264/install/all"
-MP3_LAME="$ROOT/$PLATFORM/mp3lame/install/all"
+X264="$ROOT/build/iOS/x264/install/all"
+MP3_LAME="$ROOT/build/iOS/mp3lame/install/all"
 
-OUTPUT_OBJECT="$ROOT/$PLATFORM/$PROJECT/object"
-OUTPUT_INSTALL="$ROOT/$PLATFORM/$PROJECT/install"
+OUTPUT_OBJECT="$ROOT/build/iOS/$PROJECT/object"
+OUTPUT_INSTALL="$ROOT/build/iOS/$PROJECT/install"
 
 # Remove old build and installation files.
-rm -rf $ROOT/$PLATFORM/$PROJECT
+rm -rf $ROOT/build/iOS/$PROJECT
 
 mkdir -p $OUTPUT_OBJECT
 mkdir -p $OUTPUT_INSTALL

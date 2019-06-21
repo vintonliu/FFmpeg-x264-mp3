@@ -10,11 +10,11 @@ SOURCE="lame-3.100"
 PROJECT=mp3lame
 LAME_PATH="$ROOT/$SOURCE"
 
-OUTPUT_OBJECT="$ROOT/android/$PROJECT/object"
-OUTPUT_INSTALL="$ROOT/android/$PROJECT/install"
+OUTPUT_OBJECT="$ROOT/build/android/$PROJECT/object"
+OUTPUT_INSTALL="$ROOT/build/android/$PROJECT/install"
 
 # Remove old build and installation files.
-rm -rf $ROOT/android/$PROJECT
+rm -rf $ROOT/build/android/$PROJECT
 
 mkdir -p $OUTPUT_OBJECT
 mkdir -p $OUTPUT_INSTALL
@@ -103,7 +103,7 @@ for ARCH in $ARCHS; do
 						--disable-shared \
 						--disable-frontend \
 						--host=$HOST \
-						--with-sysroot=$SYSROOT\
+						--with-sysroot=$SYSROOT \
 						|| exit 1
 	
 	echo "CC = $CC"
