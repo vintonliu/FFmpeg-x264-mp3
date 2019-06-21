@@ -1,7 +1,30 @@
 # FFmpeg-x264-mp3
-ffmpeg with x264 and mp3 build script for ios
+ffmpeg with x264 and mp3 build on IOS and Android 
 
-test ok for FFmpeg release/4.1, lame3.100 and x264 stable code.
+## Environment
+- OS: MAC 10.14.5
+- IDE:
+    
+    Xcode 10.2.1
+
+    NDK r17c
+
+## Sources
+    FFmpeg release/4.1
+
+    Lame 3.100
+
+    x264  5493be84cdccecee613236c31b1e3227681ce428
+
+## Usage
+- IOS
+```
+./build_ffmpeg_ios.sh
+```
+- Android
+```
+./build_ffmpeg_android.sh
+```
 
 ## Issue about ndk r17c
 - x264 build not found limits.h
