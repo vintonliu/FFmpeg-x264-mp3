@@ -24,7 +24,7 @@ if [ $# = 1 ]
 then
 	ARCHS="$1"
 else
-	ARCHS="arm arm64 mipsel x86 x86_64"
+	ARCHS="arm arm64 x86 x86_64"
 fi
 
 echo "ARCHS = $ARCHS"

@@ -22,12 +22,12 @@ if [ $# = 1 ]
 then
 	ARCHS="$1"
 else
-	ARCHS="arm arm64 mipsel x86 x86_64"
+	ARCHS="arm arm64 x86 x86_64"
 fi
 
 echo "ARCHS = $ARCHS"
 
-TARGET_API=android-23
+API=23
 ORIGIN_PATH=$PATH
 
 CONFIGURE_FLAGS="--disable-everything \
@@ -81,15 +81,14 @@ CONFIGURE_FLAGS="--disable-everything \
                 --disable-avdevice \
                 --enable-pic"
 
-cd ffmpeg
 for ARCH in $ARCHS; do
     echo "Building ffmpeg for $ARCH ......"
+    mkdir -p "$OUTPUT_OBJECT/$ARCH"
+	cd "$OUTPUT_OBJECT/$ARCH"
+
 	# absolute path to x264 library
     X264="$ROOT/android/x264/install/$ARCH"
     MP3_LAME="$ROOT/android/mp3lame/install/$ARCH"
-
-	PLATFORM=$ANDROID_NDK_ROOT/platforms/$TARGET_API/arch-$ARCH
-	EXTRA_FLAGS=
 
     if [ ! -f "$X264/lib/libx264.a" ]; 
     then
@@ -104,9 +103,13 @@ for ARCH in $ARCHS; do
         $MP3_LAME/build-lame-android.sh $ARCH
     fi
 
-	if [ "$ARCH" = "arm" ]
+	SYSROOT=$ANDROID_NDK_ROOT/platforms/android-$API/arch-$ARCH
+	ISYSROOT=$ANDROID_NDK_ROOT/sysroot
+	EXTRA_FLAGS=
+
+    if [ "$ARCH" = "arm" ]
 	then
-		HOST=arm-linux
+		HOST=arm-linux-androideabi
 		PREBUILT=$ANDROID_NDK_ROOT/toolchains/arm-linux-androideabi-4.9/prebuilt/darwin-x86_64
 		CROSS_PREFIX=$PREBUILT/bin/arm-linux-androideabi
 		EXTRA_FLAGS="-mthumb -Wno-deprecated -mfloat-abi=softfp -mfpu=vfpv3-d16 -marm -march=armv7-a"
@@ -118,17 +121,20 @@ for ARCH in $ARCHS; do
 	elif [ "$ARCH" = "mipsel" ]
 	then
 		HOST=mipsel-linux-android
+		DISABLE_ASM=--disable-asm
 		PREBUILT=$ANDROID_NDK_ROOT/toolchains/$HOST-4.9/prebuilt/darwin-x86_64
-		PLATFORM=$ANDROID_NDK_ROOT/platforms/$TARGET_API/arch-mips
+		SYSROOT=$ANDROID_NDK_ROOT/platforms/android-$API/arch-mips
 		CROSS_PREFIX=$PREBUILT/bin/mipsel-linux-android
 	elif [ "$ARCH" = "x86" ]
 	then
 		HOST=i686-linux-android
+		DISABLE_ASM=--disable-asm
 		PREBUILT=$ANDROID_NDK_ROOT/toolchains/x86-4.9/prebuilt/darwin-x86_64
 		CROSS_PREFIX=$PREBUILT/bin/i686-linux-android
 	elif [ "$ARCH" = "x86_64" ]
 	then
 		HOST=x86_64-linux-android
+		DISABLE_ASM=--disable-asm
 		PREBUILT=$ANDROID_NDK_ROOT/toolchains/x86_64-4.9/prebuilt/darwin-x86_64
 		CROSS_PREFIX=$PREBUILT/bin/x86_64-linux-android
 	fi
@@ -136,34 +142,37 @@ for ARCH in $ARCHS; do
     mkdir -p $OUTPUT_INSTALL/$ARCH
     mkdir -p $OUTPUT_OBJECT/$ARCH
 
-	CFLAGS="-I$PLATFORM/usr/include -DANDROID $EXTRA_FLAGS"
-    CXXFLAGS="$CFLAGS"
-    LDFLAGS="$CFLAGS"
+    ECFLAGS="--sysroot=$ISYSROOT -isystem $ISYSROOT/usr/include/$HOST -D__ANDROID_API__=$API -D__ANDROID__ -DANDROID"
+	ELDFLAGS="--sysroot=$SYSROOT -L$SYSROOT/usr/lib"	
 
     if [ "$X264" ]
     then
         CONFIGURE_FLAGS="$CONFIGURE_FLAGS --enable-gpl --enable-libx264"
-        CFLAGS="$CFLAGS -I$X264/include"
-        LDFLAGS="$LDFLAGS -L$X264/lib"
+        ECFLAGS="$ECFLAGS -I$X264/include"
+        ELDFLAGS="$ELDFLAGS -L$X264/lib"
     fi
 
     if [ "$MP3_LAME" ]
     then
         CONFIGURE_FLAGS="$CONFIGURE_FLAGS --enable-libmp3lame --enable-decoder=mp3 --enable-encoder=libmp3lame --enable-muxer=mp3"
-        CFLAGS="$CFLAGS -I$MP3_LAME/include"
-        LDFLAGS="$LDFLAGS -L$MP3_LAME/lib"
+        ECFLAGS="$ECFLAGS -I$MP3_LAME/include"
+        ELDFLAGS="$ELDFLAGS -L$MP3_LAME/lib"
     fi
 
+    ECXXFLAGS="$ECFLAGS"
+    LDFLAGS="$ELDFLAGS"
     
-    ./configure --prefix=$OUTPUT_INSTALL/$ARCH \
+    mkdir -p $OUTPUT_INSTALL/$ARCH
+
+    $FFMPEG_PATH/configure --prefix=$OUTPUT_INSTALL/$ARCH \
                 --arch=$ARCH \
                 --cc=$CROSS_PREFIX-gcc \
                 --cross-prefix=$CROSS_PREFIX- \
                 --nm=$CROSS_PREFIX-nm \
                 --sysroot=$PLATFORM \
-                --extra-cflags="$CFLAGS" \
-                --extra-cxxflags="$CXXFLAGS" \
-		        --extra-ldflags="$LDFLAGS" \
+                --extra-cflags="$ECFLAGS" \
+                --extra-cxxflags="$ECXXFLAGS" \
+		        --extra-ldflags="$ELDFLAGS" \
                 $CONFIGURE_FLAGS \
                 || exit 1
 
