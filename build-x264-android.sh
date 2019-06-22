@@ -1,6 +1,6 @@
 #!/bin/sh
 
-ANDROID_NDK_ROOT=/Users/51talk/android-ndk-r17c
+ANDROID_NDK_ROOT=/Users/vinton/android-ndk-r17c
 if [ ! -d "${ANDROID_NDK_ROOT}" ];then
 echo error,no ANDROID_NDK_ROOT,set ANDROID_NDK_ROOT to NDK path
 exit 1

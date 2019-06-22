@@ -102,6 +102,7 @@ extra_configure=(
 
 x264_configure="--enable-gpl --enable-libx264"
 mp3lame_configure="--enable-libmp3lame --enable-encoder=libmp3lame --enable-muxer=mp3"
+fdkaac_configure="--enable-libfdk-aac"
 
 #交叉编译后的运行环境
 hosts=(
@@ -149,6 +150,9 @@ X264_INSTALL_DIR=$ROOT/build/android/x264/install
 #libmp3lame安装目录
 LAME_INSTALL_DIR=$ROOT/build/android/mp3lame/install
 
+# fdk-aac 安装目录
+FDK_AAC_INSTALL_DIR=$ROOT/build/android/fdkaac/install
+
 # 缓存用户 PATH 变量
 USER_PATH=$PATH
 
@@ -166,14 +170,19 @@ do
     echo "开始配置 ${android_toolchains[i]} 版本"
    
     #配置额外库头文件和库文件路径
-    extra_include="-I$X264_INSTALL_DIR/${android_toolchains[i]}/include -I$LAME_INSTALL_DIR/${android_toolchains[i]}/include"
-    extra_lib="-L$X264_INSTALL_DIR/${android_toolchains[i]}/lib -L$LAME_INSTALL_DIR/${android_toolchains[i]}/lib"
+    extra_include="-I$X264_INSTALL_DIR/${android_toolchains[i]}/include \
+                    -I$LAME_INSTALL_DIR/${android_toolchains[i]}/include \
+                    -I$FDK_AAC_INSTALL_DIR/${android_toolchains[i]}/include"
+
+    extra_lib="-L$X264_INSTALL_DIR/${android_toolchains[i]}/lib \
+                -L$LAME_INSTALL_DIR/${android_toolchains[i]}/lib \
+                -L$FDK_AAC_INSTALL_DIR/${android_toolchains[i]}/lib"
     
     #交叉编译最重要的是配置--host、--cross-prefix、sysroot、以及extra-cflags和extra-ldflags
     $SOURCE_PATH/configure --prefix=$PREFIX/${android_toolchains[i]} \
                             ${configure} \
                             ${extra_configure[i]} \
-                            $x264_configure $mp3lame_configure \
+                            $x264_configure $mp3lame_configure $fdkaac_configure \
                             --enable-cross-compile \
                             --target-os=linux \
                             --arch=${archs[i]} \

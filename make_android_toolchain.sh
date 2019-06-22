@@ -7,7 +7,7 @@
 #!/bin/bash
 
 # NDK目录 r17c是最后一个支持 gcc 的 ndk
-export NDK_HOME=/Users/51talk/android-ndk-r17c
+export NDK_HOME=/Users/vinton/android-ndk-r17c
 
 # 生成交叉编译链工具
 toolchain=${NDK_HOME}/build/tools/make_standalone_toolchain.py

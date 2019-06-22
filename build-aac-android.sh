@@ -1,4 +1,11 @@
-#!/bin/sh
+#########################################################################
+# File Name: build-aac-android.sh
+# Author: liuwch
+# mail: liuwenchang1234@163.com
+# Created Time: 六  6/22 22:13:15 2019
+#########################################################################
+#!/bin/bash
+
 ANDROID_NDK_ROOT=/Users/vinton/android-ndk-r17c
 if [ ! -d "${ANDROID_NDK_ROOT}" ];then
 echo error,no ANDROID_NDK_ROOT,set ANDROID_NDK_ROOT to NDK path
@@ -6,8 +13,8 @@ exit 1
 fi
 
 ROOT=`pwd`
-SOURCE="lame-3.100"
-PROJECT=mp3lame
+SOURCE="fdk-aac-2.0.0"
+PROJECT=fdkaac
 LAME_PATH="$ROOT/$SOURCE"
 
 OUTPUT_OBJECT="$ROOT/build/android/$PROJECT/object"
@@ -33,7 +40,7 @@ API=23
 ORIGIN_PATH=$PATH
 
 for ARCH in $ARCHS; do
-	echo "Building mp3lame for $ARCH ......"
+	echo "Building fdkaac for $ARCH ......"
 	mkdir -p "$OUTPUT_OBJECT/$ARCH"
 	cd "$OUTPUT_OBJECT/$ARCH"
 
@@ -100,8 +107,8 @@ for ARCH in $ARCHS; do
 
 	$LAME_PATH/configure --prefix=$OUTPUT_INSTALL/$ARCH \
 						--enable-static \
-						--disable-shared \
-						--disable-frontend \
+                        --disable-shared \
+                        --with-pic=yes \
 						--host=$HOST \
 						--with-sysroot=$SYSROOT \
 						|| exit 1

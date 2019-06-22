@@ -16,14 +16,54 @@ ffmpeg with x264 and mp3 build on IOS and Android
 
     x264  5493be84cdccecee613236c31b1e3227681ce428
 
+## Prepare
+```
+    brew install automake
+    brew install libtool
+```
+
 ## Usage
+### x264
 - IOS
 ```
-./build_ffmpeg_ios.sh
+./build-x264-ios.sh
+```
+
+- Android
+```
+./android_build_x264.sh
+```
+
+### LameMP3
+- IOS
+```
+./build-lame-ios.sh
+```
+
+- Android
+```
+./android_build_lame.sh
+```
+
+### FdkAAC
+- IOS
+```
+./build-aac-ios.sh
+```
+
+- Android
+```
+./android_build_aac.sh
+```
+
+### FFmpeg
+- IOS
+```
+./build-ffmpeg-ios.sh
 ```
 - Android
 ```
-./build_ffmpeg_android.sh
+./android_build_ffmpeg.sh
 ```
 
 ## Issue about ndk r17c

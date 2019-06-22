@@ -1,29 +1,37 @@
 #!/bin/sh
 
+ROOT=`pwd`
+# absolute path to x264 library
+X264="$ROOT/build/iOS/x264/install/all"
+MP3_LAME="$ROOT/build/iOS/mp3lame/install/all"
+FDK_AAC="$ROOT/build/iOS/fdkaac/install/all"
+
 # check h264 lib 
-if [ ! -f "$(pwd)/iOS/x264/install/all/lib/libx264.a" ]; 
+if [ ! -f "$X264/lib/libx264.a" ]
 then
-echo "no x264 lib,start to build x264"
-./build-x264-ios.sh
+	echo "no x264 lib,start to build x264"
+	./build-x264-ios.sh
 fi
 
 # check mp3lame lib 
-if [ ! -f "$(pwd)/iOS/mp3lame/install/all/lib/libmp3lame.a" ]; 
+if [ ! -f "$MP3_LAME/lib/libmp3lame.a" ]
 then
-echo "no mp3lame lib,start to build mp3lame"
-./build-lame-ios.sh
+	echo "no mp3lame lib,start to build mp3lame"
+	./build-lame-ios.sh
 fi
 
-ROOT=`pwd`
+# check fdk-aac lib
+if [ ! -f "$FDK_AAC/lib/libfdk-aac.a"]
+then
+	echo "no fdk-aac lib, start to build fdk-aac"
+	./build-aac-ios.sh
+fi
+
 SOURCE="ffmpeg"
 PROJECT=ffmpeg
 FFMPEG_PATH="$ROOT/$SOURCE"
 
 ARCHS="arm64 armv7 x86_64"
-
-# absolute path to x264 library
-X264="$ROOT/build/iOS/x264/install/all"
-MP3_LAME="$ROOT/build/iOS/mp3lame/install/all"
 
 OUTPUT_OBJECT="$ROOT/build/iOS/$PROJECT/object"
 OUTPUT_INSTALL="$ROOT/build/iOS/$PROJECT/install"
@@ -37,8 +45,6 @@ mkdir -p $OUTPUT_INSTALL
 FAT="$OUTPUT_INSTALL/all"
 THIN=$OUTPUT_INSTALL
 
-
-#FDK_AAC=`pwd`/fdk-aac/fdk-aac-ios
 
 CONFIGURE_FLAGS="--enable-cross-compile --disable-debug --disable-programs \
                  --disable-doc --enable-pic"
