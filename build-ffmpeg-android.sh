@@ -82,26 +82,35 @@ CONFIGURE_FLAGS="--disable-everything \
                 --enable-pic"
 
 for ARCH in $ARCHS; do
-    echo "Building ffmpeg for $ARCH ......"
-    mkdir -p "$OUTPUT_OBJECT/$ARCH"
-	cd "$OUTPUT_OBJECT/$ARCH"
-
-	# absolute path to x264 library
-    X264="$ROOT/android/x264/install/$ARCH"
-    MP3_LAME="$ROOT/android/mp3lame/install/$ARCH"
+    
+    # absolute path to x264 library
+    X264="$ROOT/build/android/x264/install/$ARCH"
+    MP3_LAME="$ROOT/build/android/mp3lame/install/$ARCH"
+    FDK_AAC="$ROOT/build/android/fdkaac/install/$ARCH"
 
     if [ ! -f "$X264/lib/libx264.a" ]; 
     then
         echo "no x264 lib,start to build x264 $ARCH"
-        $X264/build-x264-android.sh $ARCH
+        $ROOT/build-x264-android.sh $ARCH
     fi
 
     # check mp3lame lib 
     if [ ! -f "$MP3_LAME/lib/libmp3lame.a" ]; 
     then
         echo "no mp3lame lib,start to build mp3lame $ARCH"
-        $MP3_LAME/build-lame-android.sh $ARCH
+        $ROOT/build-lame-android.sh $ARCH
     fi
+
+    # check fdk aac lib 
+    if [ ! -f "$FDK_AAC/lib/libfdk-aac.a" ]; 
+    then
+        echo "no fdk-aac lib,start to build fdk-aac $ARCH"
+        $ROOT/build-aac-android.sh $ARCH
+    fi
+
+    echo "Building ffmpeg for $ARCH ......"
+    mkdir -p "$OUTPUT_OBJECT/$ARCH"
+	cd "$OUTPUT_OBJECT/$ARCH"
 
 	SYSROOT=$ANDROID_NDK_ROOT/platforms/android-$API/arch-$ARCH
 	ISYSROOT=$ANDROID_NDK_ROOT/sysroot
@@ -143,11 +152,11 @@ for ARCH in $ARCHS; do
     mkdir -p $OUTPUT_OBJECT/$ARCH
 
     ECFLAGS="--sysroot=$ISYSROOT -isystem $ISYSROOT/usr/include/$HOST -D__ANDROID_API__=$API -D__ANDROID__ -DANDROID"
-	ELDFLAGS="--sysroot=$SYSROOT -L$SYSROOT/usr/lib"	
+	ELDFLAGS="--sysroot=$SYSROOT -L$SYSROOT/usr/lib -lm"	
 
     if [ "$X264" ]
     then
-        CONFIGURE_FLAGS="$CONFIGURE_FLAGS --enable-gpl --enable-libx264"
+        CONFIGURE_FLAGS="$CONFIGURE_FLAGS --enable-gpl --enable-libx264 --enable-encoder=libx264"
         ECFLAGS="$ECFLAGS -I$X264/include"
         ELDFLAGS="$ELDFLAGS -L$X264/lib"
     fi
@@ -157,6 +166,13 @@ for ARCH in $ARCHS; do
         CONFIGURE_FLAGS="$CONFIGURE_FLAGS --enable-libmp3lame --enable-decoder=mp3 --enable-encoder=libmp3lame --enable-muxer=mp3"
         ECFLAGS="$ECFLAGS -I$MP3_LAME/include"
         ELDFLAGS="$ELDFLAGS -L$MP3_LAME/lib"
+    fi
+
+    if [ "$FDK_AAC" ]
+    then
+        CONFIGURE_FLAGS="$CONFIGURE_FLAGS --enable-libfdk-aac --enable-encoder=libfdk_aac"
+        ECFLAGS="$ECFLAGS -I$FDK_AAC/include"
+        ELDFLAGS="$ELDFLAGS -L$FDK_AAC/lib"
     fi
 
     ECXXFLAGS="$ECFLAGS"

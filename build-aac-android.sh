@@ -15,7 +15,7 @@ fi
 ROOT=`pwd`
 SOURCE="fdk-aac-2.0.0"
 PROJECT=fdkaac
-LAME_PATH="$ROOT/$SOURCE"
+AAC_PATH="$ROOT/$SOURCE"
 
 OUTPUT_OBJECT="$ROOT/build/android/$PROJECT/object"
 OUTPUT_INSTALL="$ROOT/build/android/$PROJECT/install"
@@ -105,7 +105,7 @@ for ARCH in $ARCHS; do
 	export RANLIB="$CROSS_PREFIX-ranlib"
 	export AR="$CROSS_PREFIX-ar"
 
-	$LAME_PATH/configure --prefix=$OUTPUT_INSTALL/$ARCH \
+	$AAC_PATH/configure --prefix=$OUTPUT_INSTALL/$ARCH \
 						--enable-static \
                         --disable-shared \
                         --with-pic=yes \

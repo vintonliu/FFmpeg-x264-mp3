@@ -21,7 +21,7 @@ then
 fi
 
 # check fdk-aac lib
-if [ ! -f "$FDK_AAC/lib/libfdk-aac.a"]
+if [ ! -f "$FDK_AAC/lib/libfdk-aac.a" ]
 then
 	echo "no fdk-aac lib, start to build fdk-aac"
 	./build-aac-ios.sh
@@ -46,8 +46,12 @@ FAT="$OUTPUT_INSTALL/all"
 THIN=$OUTPUT_INSTALL
 
 
-CONFIGURE_FLAGS="--enable-cross-compile --disable-debug --disable-programs \
-                 --disable-doc --enable-pic"
+CONFIGURE_FLAGS="--enable-cross-compile \
+				 --disable-debug \
+				 --disable-programs \
+                 --disable-doc \
+				 --enable-pic \
+				 --enable-nonfree"
 
 if [ "$X264" ]
 then

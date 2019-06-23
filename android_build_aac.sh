@@ -36,8 +36,7 @@ extra_cflags=(
 #共同配置项,可以额外增加相关配置，详情可查看源文件目录下configure
 configure="--enable-static \
             --disable-shared \
-            --with-pic=yes \
-            --disable-silent-rules"
+            --with-pic=yes"
 
 #针对各版本不同的编译项
 extra_configure=(
@@ -116,3 +115,5 @@ do
     echo "开始编译并安装 ${android_toolchains[i]} 版本"
     make -j8 && make install && make distclean
 done
+
+cd $ROOT

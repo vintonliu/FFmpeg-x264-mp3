@@ -176,7 +176,8 @@ do
 
     extra_lib="-L$X264_INSTALL_DIR/${android_toolchains[i]}/lib \
                 -L$LAME_INSTALL_DIR/${android_toolchains[i]}/lib \
-                -L$FDK_AAC_INSTALL_DIR/${android_toolchains[i]}/lib"
+                -L$FDK_AAC_INSTALL_DIR/${android_toolchains[i]}/lib \
+                -lm"
     
     #交叉编译最重要的是配置--host、--cross-prefix、sysroot、以及extra-cflags和extra-ldflags
     $SOURCE_PATH/configure --prefix=$PREFIX/${android_toolchains[i]} \
