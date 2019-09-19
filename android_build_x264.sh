@@ -16,7 +16,7 @@ then
 fi
 
 #配置交叉编译链
-export TOOL_ROOT=$ROOT/android-toolchain
+export TOOL_ROOT=~/android-toolchain-r17c
 
 # 五种类型cpu编译链
 android_toolchains=(
@@ -47,7 +47,6 @@ configure="--disable-cli \
            --enable-pic \
            --disable-opencl \
            --enable-strip \
-           --disable-cli \
            --disable-win32thread \
            --disable-avs \
            --disable-swscale \
