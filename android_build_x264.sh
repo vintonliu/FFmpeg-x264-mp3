@@ -20,17 +20,17 @@ export TOOL_ROOT=~/android-toolchain-r17c
 
 # 五种类型cpu编译链
 android_toolchains=(
-   "armeabi"
+   # "armeabi"
    "armeabi-v7a"
    "arm64-v8a"
-   "x86"
-   "x86_64"
+   # "x86"
+   # "x86_64"
 )
 
 # 优化编译项
-API=23
+API=19
 extra_cflags=(
-   "-march=armv5te -msoft-float -D__ANDROID__ -D__ANDROID_API__=$API -D__ARM_ARCH_5TE__ -D__ARM_ARCH_5TEJ__"
+   # "-march=armv5te -msoft-float -D__ANDROID__ -D__ANDROID_API__=$API -D__ARM_ARCH_5TE__ -D__ARM_ARCH_5TEJ__"
    "-march=armv7-a -mfloat-abi=softfp -mfpu=neon -mthumb -D__ANDROID__ -D__ANDROID_API__=$API -D__ARM_ARCH_7__ -D__ARM_ARCH_7A__ -D__ARM_ARCH_7R__ -D__ARM_ARCH_7M__ -D__ARM_ARCH_7S__"
    "-march=armv8-a -D__ANDROID__ -D__ANDROID_API__=$API -D__ARM_ARCH_8__ -D__ARM_ARCH_8A__"
    "-march=i686 -mtune=i686 -m32 -mmmx -msse2 -msse3 -mssse3 -D__ANDROID__ -D__ANDROID_API__=$API -D__i686__"
@@ -43,7 +43,6 @@ extra_cflags=(
 # --enable-shared
 configure="--disable-cli \
            --enable-static \
-           --enable-shared \
            --enable-pic \
            --disable-opencl \
            --enable-strip \
@@ -53,19 +52,21 @@ configure="--disable-cli \
            --disable-lavf \
            --disable-ffms \
            --disable-gpac \
+           --bit-depth=all \
            --disable-lsmash"
 
 #针对各版本不同的编译项
+   #"--disable-asm"
 extra_configure=(
-   "--disable-asm"
+   # "--disable-asm"
    ""
    ""
-   "--disable-asm"
-   "--disable-asm"
+   ""
+   ""
 )
 #交叉编译后的运行环境
 hosts=(
-  "arm-linux-androideabi"
+#   "arm-linux-androideabi"
   "arm-linux-androideabi"
   "aarch64-linux-android"
   "i686-linux-android"
@@ -73,7 +74,7 @@ hosts=(
 )
 #交叉编译工具前缀
 cross_prefix=(
-  "arm-linux-androideabi-"
+#   "arm-linux-androideabi-"
   "arm-linux-androideabi-"
   "aarch64-linux-android-"
   "i686-linux-android-"
@@ -118,5 +119,5 @@ do
                            || exit 1
    make clean
    echo "开始编译并安装 ${android_toolchains[i]} 版本"
-   make -j8 && make install && make distclean
+   make -j8 && make install #&& make distclean
 done
