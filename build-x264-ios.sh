@@ -1,114 +1,96 @@
 #!/bin/sh
 
-CONFIGURE_FLAGS="--disable-cli \
-				--enable-static \
-				--enable-pic \
-				--disable-opencl \
-				--enable-strip \
-				--disable-win32thread \
-				--bit-depth=8 \
-				--disable-avs \
-				--disable-swscale \
-				--disable-lavf \
-				--disable-ffms \
-				--disable-gpac \
-				--disable-lsmash"
-
-ARCHS="arm64 armv7 x86_64"
 
 # directories
-# Lib install dir.
-ROOT=`pwd`
+#Lib install dir.
+CWD=`pwd`
+PLATFORM=iOS
 SOURCE="x264"
-PROJECT=x264
-X264_PATH="$ROOT/$SOURCE"
+X264_PATH="$CWD/$SOURCE"
 
-OUTPUT_OBJECT="$ROOT/build/iOS/$PROJECT/object"
-OUTPUT_INSTALL="$ROOT/build/iOS/$PROJECT/install"
-
-# Remove old build and installation files.
-rm -rf $ROOT/build/iOS/$PROJECT
-
-mkdir -p $OUTPUT_OBJECT
-mkdir -p $OUTPUT_INSTALL
-
+OUTPUT_OBJECT="$CWD/build/$PLATFORM/x264/object"
+OUTPUT_INSTALL="$CWD/build/$PLATFORM/x264/install"
 FAT="$OUTPUT_INSTALL/all"
 THIN="$OUTPUT_INSTALL"
-BUILD_LIBS="libx264.a"
 
-DEPLOYMENT_TARGET="9.0"
+rm -rf $CWD/build/$PLATFORM/x264
 
-XCODEDIR=`xcode-select --print-path`
+MIN_VERSION="9.0"
+CONFIGURE_FLAGS="--enable-static --enable-pic --disable-cli --disable-asm"
+ARCHS="arm64 x86_64 armv7"
 
-CWD=`pwd`
-for ARCH in $ARCHS
-do
-	echo "building $ARCH..."
-	mkdir -p "$OUTPUT_OBJECT/$ARCH"
-	cd "$OUTPUT_OBJECT/$ARCH"
-	
-	MIN_VERSION=
-	if [ "$ARCH" = "i386" -o "$ARCH" = "x86_64" ]
-	then
-		PLATFORM="iPhoneSimulator"
-		CONFIGURE_FLAGS="$CONFIGURE_FLAGS --disable-asm"
+build_x264() {
+	for ARCH in $ARCHS
+	do
+		echo "building x264 on $ARCH..."
+		mkdir -p $OUTPUT_OBJECT/$ARCH
+		cd $OUTPUT_OBJECT/$ARCH
 
-		if [ "$ARCH" = "x86_64" ]
+		if [ "$ARCH" = "i386" -o "$ARCH" = "x86_64" ]
 		then
-			MIN_VERSION="-mios-simulator-version-min=$DEPLOYMENT_TARGET"
-			HOST="x86_64-apple-darwin"
+		    PLATFORM="iPhoneSimulator"
+		    if [ "$ARCH" = "x86_64" ]
+		    then
+		    	HOST="--host=x86_64-apple-darwin"
+		    else
+				HOST="--host=i386-apple-darwin"
+		    fi
 		else
-			MIN_VERSION="-mios-simulator-version-min=$DEPLOYMENT_TARGET"
-			HOST="i386-apple-darwin"
+		    PLATFORM="iPhoneOS"
+		    if [ $ARCH = "arm64" ]
+		    then
+		        HOST="--host=aarch64-apple-darwin"
+		    else
+		        HOST="--host=arm-apple-darwin"
+		    fi
 		fi
-	else
-		PLATFORM="iPhoneOS"
-		MIN_VERSION="-mios-version-min=$DEPLOYMENT_TARGET"
-		if [ $ARCH = "arm64" ]
-		then
-			HOST="aarch64-apple-darwin"
-		else
-			HOST="arm-apple-darwin"
-		fi
-	fi
 
-	SYSROOT=${XCODEDIR}/Platforms/${PLATFORM}.platform/Developer/SDKs/${PLATFORM}.sdk
+		XCRUN_SDK=`echo $PLATFORM | tr '[:upper:]' '[:lower:]'`
+		CC="xcrun -sdk $XCRUN_SDK clang"
+		CFLAGS="-arch $ARCH -miphoneos-version-min=$MIN_VERSION -Wno-error=unused-command-line-argument"
+		# CXXFLAGS="$CFLAGS"
+		LDFLAGS="$CFLAGS"
+		export CC=$CC
+		$X264_PATH/configure \
+		    $CONFIGURE_FLAGS \
+		    --extra-cflags="$CFLAGS" \
+		    --extra-ldflags="$LDFLAGS" \
+		    --prefix="$THIN/$ARCH" || exit 1
 
-	XCRUN_SDK=`echo $PLATFORM | tr '[:upper:]' '[:lower:]'`	
-	CC="xcrun -sdk $XCRUN_SDK clang"
-	CFLAGS="-arch $ARCH $MIN_VERSION"
-	CXXFLAGS="$CFLAGS"
-	ASFLAGS="$CFLAGS"
-	LDFLAGS="$CFLAGS"
-	
-	CC=$CC $X264_PATH/configure --prefix="$THIN/$ARCH" \
-		$CONFIGURE_FLAGS \
-		--sysroot=$SYSROOT \
-		--host=$HOST \
-		--extra-cflags="$CFLAGS" \
-		--extra-asflags="$ASFLAGS"
+		make -j3 && make install
+	done
 
-	make -j3 && make install #&& make distclean
 	cd $CWD
-done
+}
 
-echo "building fat binaries..."
-mkdir -p $FAT/lib
-set - $ARCHS
-CWD=`pwd`
+combile_lib() {
+	echo "building fat binaries..."
+	mkdir -p $FAT/lib
+	set - $ARCHS
 
-for ARCH in $ARCHS
-do
-	LIPO_CREATE="$LIPO_CREATE $THIN/$ARCH/lib/$BUILD_LIBS"
-done
+	cd $THIN/$1/lib
+	for LIB in *.a
+	do
+		# cd $CWD
+		echo lipo -create `find $THIN -name $LIB` -output $FAT/lib/$LIB 1>&2
+		lipo -create `find $THIN -name $LIB` -output $FAT/lib/$LIB || exit 1
 
-lipo -create $LIPO_CREATE -output $FAT/lib/$BUILD_LIBS
+		echo "************************************************************"
+		lipo -i $FAT/lib/$LIB
+	done
 
-cd $CWD
-cp -rf $THIN/$1/include $FAT
+	cd $CWD
+	cp -rf $THIN/$1/include $FAT
+}
 
-echo "************************************************************"
-lipo -i $FAT/lib/$BUILD_LIBS
-echo "************************************************************"
+copy_lib() {
+	echo "********* copy fdk-aac lib ********"
+	DST=$CWD/../refs/ios
+	cp -rf $FAT/lib/*.a $DST
+}
+
+build_x264 || exit 1
+combile_lib || exit 1
+copy_lib
 
 echo Done

@@ -1,14 +1,18 @@
-#!/bin/sh
-# if [ ! -d "${ANDROID_NDK_ROOT}" ];then
-# echo error,no ANDROID_NDK_ROOT,set ANDROID_NDK_ROOT to NDK path
-# exit 1
-# fi
+#########################################################################
+# File Name: build-aac-android.sh
+# Author: liuwch
+# mail: liuwenchang1234@163.com
+# Created Time: 六  6/22 22:13:15 2019
+#########################################################################
+#!/bin/bash
 
 ANDROID_NDK_ROOT=~/android-ndk-r20
-TOOLCHAIN=$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/darwin-x86_64
+if [ ! -d "${ANDROID_NDK_ROOT}" ];then
+echo error,no ANDROID_NDK_ROOT,set ANDROID_NDK_ROOT to NDK path
+exit 1
+fi
 
-CWD=`pwd`
-SOURCE_PATH="$CWD/x264"
+TOOLCHAIN=$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/darwin-x86_64
 
 API_32=19
 API_64=21
@@ -46,23 +50,32 @@ extra_cflags=(
     "-march=core-avx-i -mtune=core-avx-i -m64 -mmmx -msse2 -msse3 -mssse3 -msse4.1 -msse4.2 -mpopcnt -D__ANDROID__  -D__ANDROID_API__=$API_64 -D__x86_64__"
 )
 
+CWD=`pwd`
+SOURCE="fdk-aac-0.1.5"
+SOURCE_PATH="$CWD/$SOURCE"
+OUTPUT_OBJECT="$CWD/build/android/fdkaac/object"
+OUTPUT_INSTALL="$CWD/build/android/fdkaac/install"
+
+# Remove old build and installation files.
+rm -rf $CWD/build/android/fdkaac
+
 CONFIGURE_FLAGS="--enable-static \
-				--enable-pic \
-				--disable-opencl \
-				--disable-cli \
-				--enable-strip \
-				--disable-win32thread"
+				--disable-shared \
+				--with-pic=yes"
 
-OUTPUT_INSTALL="$CWD/build/android/x264/install"
-OUTPUT_OBJECT="$CWD/build/android/x264/object"
-rm -rf $CWD/build/android/x264
+buld_fdkaac() {
+	if [ ! -f $SOURCE_PATH/configure ]
+	then
+		cd $SOURCE
+		./autogen.sh
+		cd $CWD
+	fi
 
-build_x264() {
 	num=${#android_abis[@]}
 	for((i=0; i<num; i++))
 	do
 		echo "*******************************************"
-		echo "Building x264 for ${android_abis[i]} ......"
+		echo "Building fdk-aac for ${android_abis[i]} ..."
 		echo "*******************************************"
 		
 		mkdir -p $OUTPUT_INSTALL/${android_abis[i]}
@@ -100,10 +113,9 @@ build_x264() {
 		
 		export CXX="$CLANG_PREFIX-clang++"
 		export CC="$CLANG_PREFIX-clang"
-		export NM="$CROSS_PREFIX-nm"
-		export STRIP="$CROSS_PREFIX-strip"
-		export RANLIB="$CROSS_PREFIX-ranlib"
-		export AR="$CROSS_PREFIX-ar"
+		# export STRIP=$STRIP
+		export RANLIB=$CROSS_PREFIX-ranlib
+		export AR=$CROSS_PREFIX-ar
 		export LDFLAGS="${extra_cflags[i]} -O3 -fPIC"
 		export CFLAGS="${extra_cflags[i]} -O3 -fPIC --sysroot=${SYSROOT}"		
 		
@@ -115,8 +127,7 @@ build_x264() {
 		$SOURCE_PATH/configure --prefix=$OUTPUT_INSTALL/${android_abis[i]} \
 								$CONFIGURE_FLAGS \
 								--host=$HOST \
-								--cross-prefix=$CROSS_PREFIX- \
-								--sysroot=$SYSROOT || exit 1
+								--with-sysroot=$SYSROOT || exit 1
 
 		make -j8 && make install # && make distclean
 		echo "Installed: $OUTPUT_INSTALL/${android_abis[i]}"
@@ -127,7 +138,7 @@ build_x264() {
 
 copy_lib() {
 	echo "*******************************************"
-	echo "Copy x264 lib ..."
+	echo "Copy fdkaac lib ..."
 	echo "*******************************************"
     num=${#android_abis[@]}
 	for((i=0; i<num; i++))
@@ -143,8 +154,7 @@ copy_lib() {
     done
 }
 
-build_x264 || exit 1
+buld_fdkaac || exit 1
 copy_lib || exit 1
-cd $CWD
 
-echo Done
+echo "Done"

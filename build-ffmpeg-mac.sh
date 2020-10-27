@@ -1,30 +1,27 @@
 #!/bin/sh
 
 CWD=`pwd`
-TARGET_OS=iOS
+PLATFORM=mac
 
 # absolute path to x264 library
-X264="$CWD/build/$TARGET_OS/x264/install/all"
-MP3_LAME="$CWD/build/$TARGET_OS/mp3lame/install/all"
-FDKAAC="$CWD/build/$TARGET_OS/fdk-aac/install/all"
-OPENSSL="$CWD/build/$TARGET_OS/openssl/install/all"
+X264="$CWD/build/$PLATFORM/x264/install/all"
+MP3_LAME="$CWD/build/$PLATFORM/mp3lame/install/all"
+FDKAAC="$CWD/build/$PLATFORM/fdk-aac/install/all"
 
 # check h264 lib 
 has_x264=0
-if [ ! -f "$X264/lib/libx264.a" ]; 
-then
-echo "no x264 lib,start to build x264"
-# ./build-x264-ios.sh || exit 1
-# has_x264=1
-fi
+# if [ ! -f "$X264/lib/libx264.a" ]; 
+# then
+# echo "no x264 lib,start to build x264"
+# ./build-x264-mac.sh || exit 1
+# fi
 # has_x264=1
 
-# check mp3lame lib 
 has_mp3lame=0
 if [ ! -f "$MP3_LAME/lib/libmp3lame.a" ]; 
 then
-echo "no mp3lame lib,start to build mp3lame"
-./build-lame-ios.sh || exit 1
+echo "no mp3lame lib, start to build mp3lame"
+./build-lame-mac.sh || exit 1
 fi
 has_mp3lame=1
 
@@ -33,33 +30,21 @@ has_fdkaac=0
 if [ ! -f "$FDKAAC/lib/libfdk-aac.a" ]; 
 then
 echo "no fdk-aac lib,start to build fdk-aac"
-./build-fdk-aac-ios.sh || exit 1
+./build-aac-mac.sh
 fi
 has_fdkaac=1
-
-# check openssl lib
-has_openssl=0
-if [ ! -f "$OPENSSL/lib/libssl.a" ]
-then
-	echo "no openssl, start to build openssl ..."
-	./build-ssl-ios.sh || exit 1
-	echo "build openssl done."
-fi
-has_openssl=1
 
 SOURCE="ffmpeg-4.2.4"
 SOURCE_PATH="$CWD/$SOURCE"
 
-OUTPUT_OBJECT="$CWD/build/$TARGET_OS/ffmpeg/object"
-OUTPUT_INSTALL="$CWD/build/$TARGET_OS/ffmpeg/install"
-THIN=$OUTPUT_INSTALL
+OUTPUT_OBJECT="$CWD/build/$PLATFORM/ffmpeg/object"
+OUTPUT_INSTALL="$CWD/build/$PLATFORM/ffmpeg/install"
 FAT="$OUTPUT_INSTALL/all"
+THIN=$OUTPUT_INSTALL
 
-# rm -rf $CWD/build/$TARGET_OS/ffmpeg
 rm -rf $OUTPUT_INSTALL
 
-CONFIGURE_FLAGS="--enable-cross-compile \
-                --disable-debug \
+CONFIGURE_FLAGS="--disable-debug \
                 --disable-programs \
                 --disable-doc \
                 --enable-pic \
@@ -68,10 +53,14 @@ CONFIGURE_FLAGS="--enable-cross-compile \
                 --disable-zlib \
                 --disable-bzlib \
                 --disable-iconv \
+                --disable-lzma \
+                --disable-xlib \
+                --disable-error-resilience \
+                --disable-lzo \
                 --disable-devices \
                 --disable-avdevice \
                 --disable-coreimage \
-				--disable-everything \
+                --disable-everything \
                 --enable-filters \
                 --enable-fft \
                 --enable-rdft \
@@ -87,10 +76,10 @@ CONFIGURE_FLAGS="--enable-cross-compile \
                 --enable-parser=aac,h264 \
                 --enable-muxer=mp3,mp4,h264,mov,wav"
 
-if [ $has_x264 -eq 1 ]
-then
-	CONFIGURE_FLAGS="$CONFIGURE_FLAGS --enable-libx264"
-fi
+# if [ $has_x264 -eq 1 ]
+# then
+# 	CONFIGURE_FLAGS="$CONFIGURE_FLAGS --enable-libx264 --enable-encoder=libx264"
+# fi
 
 if [ $has_fdkaac -eq 1 ]
 then
@@ -102,18 +91,12 @@ then
 	CONFIGURE_FLAGS="$CONFIGURE_FLAGS --enable-libmp3lame --enable-encoder=libmp3lame"
 fi
 
-if [ $has_openssl -eq 1 ]
-then
-	CONFIGURE_FLAGS="$CONFIGURE_FLAGS --enable-openssl"
-fi
-
 # avresample
-# CONFIGURE_FLAGS="$CONFIGURE_FLAGS --enable-avresample"
+#CONFIGURE_FLAGS="$CONFIGURE_FLAGS --enable-avresample"
 
-ARCHS="arm64 armv7 x86_64"
-#ARCHS="arm64"
+ARCHS="x86_64"
 
-MIN_VERSION="9.0"
+MIN_VERSION="10.10"
 
 build_ffmpeg() {
 	if [ ! `which yasm` ]
@@ -137,37 +120,23 @@ build_ffmpeg() {
 			|| exit 1
 	fi
 
+	if [ ! -r $SOURCE ]
+	then
+		echo 'FFmpeg source not found. Trying to download...'
+		curl http://www.ffmpeg.org/releases/$SOURCE.tar.bz2 | tar xj \
+			|| exit 1
+	fi
+
 	for ARCH in $ARCHS
 	do
-		echo "*******************************************"
-		echo "Building ffmpeg for $ARCH ..."
-		echo "*******************************************"
-
+		echo "building $ARCH..."
 		mkdir -p "$OUTPUT_OBJECT/$ARCH"
 		cd "$OUTPUT_OBJECT/$ARCH"
 
-		CFLAGS="-arch $ARCH -miphoneos-version-min=$MIN_VERSION"
-		if [ "$ARCH" = "i386" -o "$ARCH" = "x86_64" ]
-		then
-		    PLATFORM="iPhoneSimulator"
-		else
-		    PLATFORM="iPhoneOS"
-		    if [ "$ARCH" = "arm64" ]
-		    then
-		        EXPORT="GASPP_FIX_XCODE5=1"
-		    fi
-
-			if [ "$ARCH" = "armv7" ]
-			then
-				CONFIGURE_FLAGS="$CONFIGURE_FLAGS --disable-asm"
-			fi
-		fi
-
-		XCRUN_SDK=`echo $PLATFORM | tr '[:upper:]' '[:lower:]'`
-		CC="xcrun -sdk $XCRUN_SDK clang"
+		CFLAGS="-arch $ARCH -mmacosx-version-min=$MIN_VERSION"
 		CXXFLAGS="$CFLAGS"
 		LDFLAGS="$CFLAGS"
-
+		
 		# if [ $has_x264 -eq 1 ]
 		# then
 		# 	CFLAGS="$CFLAGS -I$X264/include"
@@ -179,31 +148,24 @@ build_ffmpeg() {
 			CFLAGS="$CFLAGS -I$FDKAAC/include"
 			LDFLAGS="$LDFLAGS -L$FDKAAC/lib"
 		fi
-
 		if [ $has_mp3lame -eq 1 ]
 		then
 			CFLAGS="$CFLAGS -I$MP3_LAME/include"
 			LDFLAGS="$LDFLAGS -L$MP3_LAME/lib"
 		fi
 
-		if [ $has_openssl -eq 1 ]
-		then
-			CFLAGS="$CFLAGS -I$OPENSSL/include"
-			LDFLAGS="$LDFLAGS -L$OPENSSL/lib"
-		fi
-
+		echo $CFLAGS
+		echo $LDFLAGS
 		$SOURCE_PATH/configure \
-		    --target-os=darwin \
+			--prefix="$THIN/$ARCH" \
+            $CONFIGURE_FLAGS \
 		    --arch=$ARCH \
-		    --cc="$CC" \
-		    $CONFIGURE_FLAGS \
 		    --extra-cflags="$CFLAGS" \
 		    --extra-cxxflags="$CXXFLAGS" \
 		    --extra-ldflags="$LDFLAGS" \
-		    --prefix="$THIN/$ARCH" \
 		|| exit 1
 
-		make -j8 install $EXPORT || exit 1
+		make -j3 install || exit 1
 	done
 
     cd $CWD
@@ -213,37 +175,37 @@ combile_libs() {
 	echo "building fat binaries..."
 	mkdir -p $FAT/lib
 	set - $ARCHS
-	cd $THIN/$1/lib
+    cd $THIN/$1/lib
 	for LIB in *.a
 	do
 		echo lipo -create `find $THIN -name $LIB` -output $FAT/lib/$LIB 1>&2
 		lipo -create `find $THIN -name $LIB` -output $FAT/lib/$LIB || exit 1
-		lipo -i $FAT/lib/$LIB
+        lipo -info $FAT/lib/$LIB
 	done
-    cp -rf $THIN/$1/include $FAT
+	cp -rf $THIN/$1/include $FAT
 
     cd $CWD
 }
 
-# copy libs
-copy_libs() {
+copy_lib() {
 	echo "*******************************************"
 	echo "Copy ffmpeg lib ..."
 	echo "*******************************************"
-	DST=$CWD/../refs/ios/ffmpeg/lib
+	DST=$CWD/../refs/mac/ffmpeg/lib
 	if [ -d $DST ]
 	then
 		rm -rf $DST
 	fi
 	mkdir -p $DST
-	cp -rf $FAT/lib/*.a $DST/
+	cp -rvf $FAT/lib/*.a $DST/
 }
 
 copy_config() {
-	DST=$CWD/../refs/ios/ffmpeg
-    # DST=$CWD/../umcs/source/umcs/third_party/ffmpeg/include/config/ios
+	DST=$CWD/../refs/mac/ffmpeg
+    echo "*******************************************"
+    echo "Copy ffmpeg build config ..."
+    echo "*******************************************"
 	for ARCH in $ARCHS; do
-	  	echo "copy config for $ARCH ..."
 		# Don't waste time on non-existent configs, if no config.h then skip.
         [ ! -e "$OUTPUT_OBJECT/$ARCH/config.h" ] && continue
         # for f in config.h config.asm libavutil/avconfig.h libavutil/ffversion.h libavcodec/bsf_list.c libavcodec/codec_list.c libavcodec/parser_list.c  libavformat/demuxer_list.c libavformat/muxer_list.c libavformat/protocol_list.c; do
@@ -251,14 +213,14 @@ copy_config() {
             FROM="$OUTPUT_OBJECT/$ARCH/$f"
             TO="$DST/config/$ARCH/$f"
             if [ "$(dirname $f)" != "" ]; then mkdir -p $(dirname $TO); fi
-            [ -e $FROM ] && cp -v $FROM $TO
+            [ -e $FROM ] && cp -rfv $FROM $TO
         done
 	done
 }
 
 build_ffmpeg || exit 1
 combile_libs || exit 1
-copy_libs || exit 1
+copy_lib || exit 1
 copy_config || exit 1
 
 echo Done

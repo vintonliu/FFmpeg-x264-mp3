@@ -3,23 +3,34 @@
 CWD=`pwd`
 
 PLATFORM=iOS
-SOURCE="mp3lame"
+SOURCE="fdk-aac-0.1.5"
+SOURCE_PATH="$CWD/$SOURCE"
 
-OUTPUT_OBJECT="$CWD/build/$PLATFORM/mp3lame/object"
-OUTPUT_INSTALL="$CWD/build/$PLATFORM/mp3lame/install"
-THIN="$OUTPUT_INSTALL"
+OUTPUT_OBJECT="$CWD/build/$PLATFORM/fdk-aac/object"
+OUTPUT_INSTALL="$CWD/build/$PLATFORM/fdk-aac/install"
 FAT="$OUTPUT_INSTALL/all"
+THIN="$OUTPUT_INSTALL"
 
-rm -rf $CWD/build/$PLATFORM/mp3lame
+rm -rf $CWD/build/$PLATFORM/fdk-aac
 
-CONFIGURE_FLAGS="--disable-shared --disable-frontend"
-ARCHS="arm64 x86_64 armv7"
 MIN_VERSION="9.0"
+CONFIGURE_FLAGS="--enable-static \
+				--disable-shared \
+				--with-pic=yes"
 
-build_lame() {
+ARCHS="arm64 x86_64 armv7"
+
+build_fdkaac() {
+	if [ ! -f $SOURCE_PATH/configure ]
+	then
+		cd $SOURCE
+		./autogen.sh
+		cd $CWD
+	fi
+
 	for ARCH in $ARCHS
 	do
-		echo "building lame on $ARCH ..."
+		echo "building $ARCH..."
 		mkdir -p "$OUTPUT_OBJECT/$ARCH"
 		cd "$OUTPUT_OBJECT/$ARCH"
 
@@ -28,25 +39,24 @@ build_lame() {
 		    PLATFORM="iPhoneSimulator"
 		    if [ "$ARCH" = "x86_64" ]
 		    then
-		    	SIMULATOR="-mios-simulator-version-min=$MIN_VERSION"
                 HOST=x86_64-apple-darwin
 		    else
-		    	SIMULATOR="-mios-simulator-version-min=$MIN_VERSION"
                 HOST=i386-apple-darwin
 		    fi
 		else
 		    PLATFORM="iPhoneOS"
-		    SIMULATOR="-mios-version-min=$MIN_VERSION"
             HOST=arm-apple-darwin
 		fi
 
 		XCRUN_SDK=`echo $PLATFORM | tr '[:upper:]' '[:lower:]'`
 		CC="xcrun -sdk $XCRUN_SDK clang -arch $ARCH -miphoneos-version-min=$MIN_VERSION"
-		
-		CC=$CC $CWD/$SOURCE/configure \
+		CXX=$CC
+		export CC=$CC
+		export CXX=$CXX
+
+		$SOURCE_PATH/configure --prefix="$THIN/$ARCH" \
 		    $CONFIGURE_FLAGS \
-            --host=$HOST \
-		    --prefix="$THIN/$ARCH" || exit 1
+            --host=$HOST || exit 1
 
 		make -j8 install
 	done
@@ -74,13 +84,11 @@ combile_lib() {
 }
 
 copy_lib() {
-	echo "********* copy lame lib ********"
+	echo "********* copy fdk-aac lib ********"
 	DST=$CWD/../refs/ios
 	cp -rf $FAT/lib/*.a $DST
 }
 
-build_lame || exit 1
+build_fdkaac || exit 1
 combile_lib || exit 1
 copy_lib
-
-echo Done

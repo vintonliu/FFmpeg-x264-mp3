@@ -1,198 +1,280 @@
 #!/bin/bash
 
-ANDROID_NDK_ROOT=/Users/vinton/android-ndk-r17c
-
+ANDROID_NDK_ROOT=~/android-ndk-r20
 if [ ! -d "${ANDROID_NDK_ROOT}" ];then
 echo error,no ANDROID_NDK_ROOT,set ANDROID_NDK_ROOT to NDK path
 exit 1
 fi
 
-ROOT=`pwd`
-SOURCE="ffmpeg"
+TOOLCHAIN=$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/darwin-x86_64
 
-OUTPUT_OBJECT="$ROOT/build/android/FFmpeg/object"
-OUTPUT_INSTALL="$ROOT/build/android/FFmpeg/install"
-FFMPEG_PATH="$ROOT/$SOURCE"
-rm -rf $ROOT/build/android/FFmpeg
+API_32=19
+API_64=21
+# 五种类型cpu编译链
+android_abis=(
+    # armeabi is no longer support build
+#   "armeabi"
+    "armeabi-v7a"
+    "arm64-v8a"
+    # "x86"
+    # "x86_64"
+)
 
-mkdir -p $OUTPUT_OBJECT
-mkdir -p $OUTPUT_INSTALL
+platforms=(
+	# "arm"
+	"armv7a"
+	"aarch64"
+	"i686"
+	"x86_64"
+)
 
-if [ $# = 1 ]
-then
-	ARCHS="$1"
-else
-	ARCHS="arm arm64 x86 x86_64"
-fi
+archs=(
+	# "arm"
+	"arm"
+	"aarch64"
+	"i686"
+	"x86_64"
+)
 
-echo "ARCHS = $ARCHS"
+extra_cflags=(
+    # "-march=armv5te -msoft-float -D__ANDROID__  -D__ANDROID_API__=$API -D__ARM_ARCH_5TE__ -D__ARM_ARCH_5TEJ__"
+    "-march=armv7-a -mfloat-abi=softfp -mfpu=neon -mthumb -D__ANDROID__  -D__ANDROID_API__=$API_32 -D__ARM_ARCH_7__ -D__ARM_ARCH_7A__ -D__ARM_ARCH_7R__ -D__ARM_ARCH_7M__ -D__ARM_ARCH_7S__"
+    "-march=armv8-a -D__ANDROID__ -D__ANDROID_API__=$API_64 -D__ARM_ARCH_8__ -D__ARM_ARCH_8A__"
+    "-march=i686 -mtune=i686 -m32 -mmmx -msse2 -msse3 -mssse3 -D__ANDROID__  -D__ANDROID_API__=$API_32 -D__i686__"
+    "-march=core-avx-i -mtune=core-avx-i -m64 -mmmx -msse2 -msse3 -mssse3 -msse4.1 -msse4.2 -mpopcnt -D__ANDROID__ -D__ANDROID_API__=$API_64 -D__x86_64__"
+)
 
-API=23
-ORIGIN_PATH=$PATH
+CWD=`pwd`
+SOURCE="ffmpeg-4.2.4"
+SOURCE_PATH="$CWD/$SOURCE"
 
-CONFIGURE_FLAGS="--disable-everything \
-                --target-os=linux \
-                --enable-cross-compile \
-                --enable-runtime-cpudetect \
-                --disable-stripping \
-                --enable-nonfree \
-                --enable-version3 \
-                --enable-static \
-                --disable-shared \
-                --enable-gpl \
-                --disable-doc \
-                --enable-avresample \
-                --enable-protocol=rtmp \
-                --enable-protocol=rtsp \
-                --enable-protocol=tcp \
-                --enable-protocol=hls \
-                --enable-protocol=http \
-                --enable-protocol=https \
-                --enable-protocol=rtmpe \
-                --enable-protocol=rtmps \
-                --enable-protocol=rtmpte \
-                --enable-protocol=rtmpts \
-                --enable-protocol=sdp \
-                --enable-protocol=rtmpt \
-                --enable-protocol=udp \
-                --enable-protocol=file \
-                --enable-decoder=aac \
-                --enable-decoder=h264 \
-                --enable-decoder=flv \
-                --enable-parser=aac \
-                --enable-parser=h264 \
-                --enable-decoder=mp3 \
-                --enable-demuxer=h264 \
-                --enable-demuxer=aac \
-                --enable-demuxer=flv \
-                --enable-demuxer=rtsp \
-                --enable-demuxer=rtp \
-                --enable-demuxer=sdp \
-                --enable-demuxer=hls \
-                --enable-demuxer=mp3 \
-                --enable-muxer=rtsp \
-                --disable-ffplay \
-                --enable-ffmpeg \
-                --disable-ffprobe \
-                --enable-protocol=rtp \
-                --enable-hwaccels \
-                --enable-zlib \
-                --disable-devices \
-                --disable-avdevice \
-                --enable-pic"
+OUTPUT_OBJECT="$CWD/build/android/ffmpeg/object"
+OUTPUT_INSTALL="$CWD/build/android/ffmpeg/install"
+# rm -rf $OUTPUT_INSTALL
 
-for ARCH in $ARCHS; do
+configure="--enable-cross-compile \
+        --target-os=android \
+        --disable-debug \
+        --enable-runtime-cpudetect \
+        --disable-programs \
+        --disable-doc \
+        --enable-static \
+        --disable-shared \
+        --disable-devices \
+        --disable-avdevice \
+        --disable-iconv \
+        --disable-outdevs \
+        --disable-indevs \
+        --disable-zlib \
+        --disable-bzlib \
+        --enable-gpl \
+        --enable-version3 \
+        --enable-nonfree \
+        --enable-pic \
+        --disable-coreimage \
+        --disable-everything \
+        --enable-filters \
+        --enable-fft \
+        --enable-rdft \
+        --enable-hwaccels \
+        --enable-decoder=vorbis,flac \
+        --enable-decoder=pcm_u8,pcm_s16le,pcm_s24le,pcm_s32le,pcm_f32le \
+        --enable-decoder=pcm_s16be,pcm_s24be,pcm_mulaw,pcm_alaw \
+        --enable-decoder=aac* \
+        --enable-decoder=mp3* \
+        --enable-protocol=rtmp* \
+        --enable-protocol=file,crypto \
+        --enable-demuxer=wav,mp3,aac,h264,mov \
+        --enable-parser=aac,h264 \
+        --enable-muxer=mp3,mp4,h264,mov,wav"
+
+target_configure=(
+    # ""
+    "--enable-armv6 --enable-armv6t2 --enable-vfp --enable-thumb --enable-neon"
+    "--enable-armv8"
+    "--disable-x86asm --disable-asm"
+    "--disable-asm"
+)
+
+extra_configure=""
+
+build_ffmpeg() {
+    num=${#android_abis[@]}
+	for((i=0; i<num; i++))
+    do
+        # absolute path to x264 library
+        X264="$CWD/build/android/x264/install/${android_abis[i]}"
+        MP3_LAME="$CWD/build/android/mp3lame/install/${android_abis[i]}"
+        FDKAAC="$CWD/build/android/fdkaac/install/${android_abis[i]}"
+        SSL="$CWD/3rd/openssl/android/${android_abis[i]}"
+
+        # has_x264=0
+        # if [ ! -f "$X264/${android_abis[i]}/lib/libx264.a" ]; 
+        # then
+        #     echo "no x264 lib,start to build x264"
+        #     $CWD/build-x264-android.sh
+        # fi
+        # has_x264=1
+
+        # check mp3lame lib 
+        has_mp3lame=0
+        if [ ! -f "$MP3_LAME/lib/libmp3lame.a" ]; 
+        then
+            echo "no mp3lame lib,start to build mp3lame"
+            $CWD/build-lame-android.sh
+        fi
+        has_mp3lame=1
+
+        # check fdk-aac lib
+        has_fdkaac=0
+        if [ ! -f "$FDKAAC/lib/libfdk-aac.a" ]; 
+        then
+            echo "no fdk-aac lib, start to build fdk-aac"
+            $CWD/build-fdk-aac-android.sh
+        fi
+        has_fdkaac=1
+
+        echo "*******************************************"
+		echo "Building ffmpeg for ${android_abis[i]} ..."
+		echo "*******************************************"
+
+        if [ "${android_abis[i]}" = "armeabi-v7a" ]
+		then
+			HOST=arm-linux
+			CLANG_PREFIX=$TOOLCHAIN/bin/${platforms[i]}-linux-androideabi$API_32
+		elif [ "${android_abis[i]}" = "arm64-v8a" ]
+		then
+			HOST=aarch64-linux-android
+			CLANG_PREFIX=$TOOLCHAIN/bin/${platforms[i]}-linux-android$API_64
+		elif [ "${android_abis[i]}" = "x86" ]
+		then
+			HOST=i686-linux-android
+			CLANG_PREFIX=$TOOLCHAIN/bin/${platforms[i]}-linux-android$API_32
+		elif [ "${android_abis[i]}" = "x86_64" ]
+		then
+			HOST=x86_64-linux-android
+			CLANG_PREFIX=$TOOLCHAIN/bin/${platforms[i]}-linux-android$API_64
+		fi
+
+		SYSROOT=$TOOLCHAIN/sysroot
+		if [ "${android_abis[i]}" = "armeabi-v7a" -o "${android_abis[i]}" = "armeabi" ]
+		then
+            CROSS_PREFIX=$TOOLCHAIN/bin/arm-linux-androideabi
+		else
+            CROSS_PREFIX=$TOOLCHAIN/bin/${platforms[i]}-linux-android
+		fi
+
+        CFLAGS="${extra_cflags[i]} -fpic"
+        # CXXFLAGS="$CFLAGS"
+        LDFLAGS="$CFLAGS"
+
+        # if [ $has_x264 -eq 1 ]
+        # then
+        #     CONFIGURE_FLAGS="$CONFIGURE_FLAGS --enable-gpl --enable-libx264"
+        #     CFLAGS="$CFLAGS -I$X264/${android_abis[i]}/include"
+        #     LDFLAGS="$LDFLAGS -L$X264/${android_abis[i]}/lib"
+        # fi
+
+        if [ $has_mp3lame -eq 1 ]
+        then
+            extra_configure="$extra_configure --enable-libmp3lame --enable-encoder=libmp3lame"
+            CFLAGS="$CFLAGS -I$MP3_LAME/include"
+            LDFLAGS="$LDFLAGS -L$MP3_LAME/lib"
+        fi
+
+        if [ $has_fdkaac -eq 1 ]
+        then
+            extra_configure="$extra_configure --enable-libfdk-aac --enable-encoder=libfdk_aac"
+            CFLAGS="$CFLAGS -I$FDKAAC/include"
+            # add -lm for ffmpeg configure to check fdk-aac lib would link error cause math functions
+            LDFLAGS="$LDFLAGS -L$FDKAAC/lib -lm"
+        fi
+
+        if [ -f "$SSL/lib/libssl.a" ]; 
+        then
+            extra_configure="$extra_configure --enable-openssl"
+            CFLAGS="$CFLAGS -I$SSL/include"
+            LDFLAGS="$LDFLAGS -L$SSL/lib"
+        fi
     
-    # absolute path to x264 library
-    X264="$ROOT/build/android/x264/install/$ARCH"
-    MP3_LAME="$ROOT/build/android/mp3lame/install/$ARCH"
-    FDK_AAC="$ROOT/build/android/fdkaac/install/$ARCH"
+        mkdir -p $OUTPUT_INSTALL/${android_abis[i]}
+        mkdir -p $OUTPUT_OBJECT/${android_abis[i]}
+        cd $OUTPUT_OBJECT/${android_abis[i]}
 
-    if [ ! -f "$X264/lib/libx264.a" ]; 
-    then
-        echo "no x264 lib,start to build x264 $ARCH"
-        $ROOT/build-x264-android.sh $ARCH
-    fi
+        echo "CFLAGS=$CFLAGS"
+        echo "LDFLAGS=$LDFLAGS"
 
-    # check mp3lame lib 
-    if [ ! -f "$MP3_LAME/lib/libmp3lame.a" ]; 
-    then
-        echo "no mp3lame lib,start to build mp3lame $ARCH"
-        $ROOT/build-lame-android.sh $ARCH
-    fi
+        $SOURCE_PATH/configure --prefix=$OUTPUT_INSTALL/${android_abis[i]} \
+                                $configure \
+                                $extra_configure \
+                                ${target_configure[i]} \
+                                --arch=${archs[i]} \
+                                --cc=$CLANG_PREFIX-clang \
+                                --cxx=$CLANG_PREFIX-clang++ \
+                                --ld=$CLANG_PREFIX-clang \
+                                --ranlib=$CROSS_PREFIX-ranlib \
+                                --cross-prefix=$CROSS_PREFIX- \
+                                --nm=$CROSS_PREFIX-nm \
+                                --sysroot=$SYSROOT \
+                                --extra-cflags="$CFLAGS" \
+                                --extra-cxxflags="$CXXFLAGS" \
+                                --extra-ldflags="$LDFLAGS" || exit 1
 
-    # check fdk aac lib 
-    if [ ! -f "$FDK_AAC/lib/libfdk-aac.a" ]; 
-    then
-        echo "no fdk-aac lib,start to build fdk-aac $ARCH"
-        $ROOT/build-aac-android.sh $ARCH
-    fi
+        make -j8 && make install || exit 1
+    done
 
-    echo "Building ffmpeg for $ARCH ......"
-    mkdir -p "$OUTPUT_OBJECT/$ARCH"
-	cd "$OUTPUT_OBJECT/$ARCH"
+    cd $CWD
+}
 
-	SYSROOT=$ANDROID_NDK_ROOT/platforms/android-$API/arch-$ARCH
-	ISYSROOT=$ANDROID_NDK_ROOT/sysroot
-	EXTRA_FLAGS=
+# copy libs
+copy_lib() {
+    echo "*******************************************"
+	echo "Copy ffmpeg lib ..."
+	echo "*******************************************"
+    num=${#android_abis[@]}
+	for((i=0; i<num; i++))
+    do
+        DST_LIB=$CWD/../refs/android/lib/${android_abis[i]}
+        if [ ! -d $DST_LIB ]
+        then
+            mkdir -p $DST_LIB
+        fi
 
-    if [ "$ARCH" = "arm" ]
-	then
-		HOST=arm-linux-androideabi
-		PREBUILT=$ANDROID_NDK_ROOT/toolchains/arm-linux-androideabi-4.9/prebuilt/darwin-x86_64
-		CROSS_PREFIX=$PREBUILT/bin/arm-linux-androideabi
-		EXTRA_FLAGS="-mthumb -Wno-deprecated -mfloat-abi=softfp -mfpu=vfpv3-d16 -marm -march=armv7-a"
-	elif [ "$ARCH" = "arm64" ]
-	then
-		HOST=aarch64-linux-android
-		PREBUILT=$ANDROID_NDK_ROOT/toolchains/$HOST-4.9/prebuilt/darwin-x86_64
-		CROSS_PREFIX=$PREBUILT/bin/aarch64-linux-android
-	elif [ "$ARCH" = "mipsel" ]
-	then
-		HOST=mipsel-linux-android
-		DISABLE_ASM=--disable-asm
-		PREBUILT=$ANDROID_NDK_ROOT/toolchains/$HOST-4.9/prebuilt/darwin-x86_64
-		SYSROOT=$ANDROID_NDK_ROOT/platforms/android-$API/arch-mips
-		CROSS_PREFIX=$PREBUILT/bin/mipsel-linux-android
-	elif [ "$ARCH" = "x86" ]
-	then
-		HOST=i686-linux-android
-		DISABLE_ASM=--disable-asm
-		PREBUILT=$ANDROID_NDK_ROOT/toolchains/x86-4.9/prebuilt/darwin-x86_64
-		CROSS_PREFIX=$PREBUILT/bin/i686-linux-android
-	elif [ "$ARCH" = "x86_64" ]
-	then
-		HOST=x86_64-linux-android
-		DISABLE_ASM=--disable-asm
-		PREBUILT=$ANDROID_NDK_ROOT/toolchains/x86_64-4.9/prebuilt/darwin-x86_64
-		CROSS_PREFIX=$PREBUILT/bin/x86_64-linux-android
-	fi
+        # copy lib
+        cp -rf $OUTPUT_INSTALL/${android_abis[i]}/lib/*.a $DST_LIB/
+    done
 
-    mkdir -p $OUTPUT_INSTALL/$ARCH
-    mkdir -p $OUTPUT_OBJECT/$ARCH
+    # copy header
+    # DST_INCLUDE=$CWD/../refs/android/include/ffmpeg
+    # if [ ! -d $DST_INCLUDE ]
+    # then
+    #     mkdir -p $DST_INCLUDE
+    # fi
 
-    ECFLAGS="--sysroot=$ISYSROOT -isystem $ISYSROOT/usr/include/$HOST -D__ANDROID_API__=$API -D__ANDROID__ -DANDROID"
-	ELDFLAGS="--sysroot=$SYSROOT -L$SYSROOT/usr/lib -lm"	
+    # all abi has same include files, so we only need copy one
+    # cp -rf $OUTPUT_INSTALL/armeabi-v7a/include/* $DST_INCLUDE/
+}
 
-    if [ "$X264" ]
-    then
-        CONFIGURE_FLAGS="$CONFIGURE_FLAGS --enable-gpl --enable-libx264 --enable-encoder=libx264"
-        ECFLAGS="$ECFLAGS -I$X264/include"
-        ELDFLAGS="$ELDFLAGS -L$X264/lib"
-    fi
+copy_config() {
+    DST=$CWD/../refs/android/ffmpeg
+    num=${#android_abis[@]}
+	for((i=0; i<num; i++))
+    do
+        echo "copy config for ${android_abis[i]} ..."
+        # Don't waste time on non-existent configs, if no config.h then skip.
+        [ ! -e "$OUTPUT_OBJECT/${android_abis[i]}/config.h" ] && continue
+        # for f in config.h config.asm libavutil/avconfig.h libavutil/ffversion.h libavcodec/bsf_list.c libavcodec/codec_list.c libavcodec/parser_list.c  libavformat/demuxer_list.c libavformat/muxer_list.c libavformat/protocol_list.c; do
+        for f in config.h config.asm libavutil/avconfig.h libavutil/ffversion.h; do
+            FROM="$OUTPUT_OBJECT/${android_abis[i]}/$f"
+            TO="$DST/config/${android_abis[i]}/$f"
+            if [ "$(dirname $f)" != "" ]; then mkdir -p $(dirname $TO); fi
+            [ -e $FROM ] && cp -v $FROM $TO
+        done
+    done
+}
 
-    if [ "$MP3_LAME" ]
-    then
-        CONFIGURE_FLAGS="$CONFIGURE_FLAGS --enable-libmp3lame --enable-decoder=mp3 --enable-encoder=libmp3lame --enable-muxer=mp3"
-        ECFLAGS="$ECFLAGS -I$MP3_LAME/include"
-        ELDFLAGS="$ELDFLAGS -L$MP3_LAME/lib"
-    fi
+build_ffmpeg || exit 1
+copy_lib || exit 1
+copy_config || exit 1
 
-    if [ "$FDK_AAC" ]
-    then
-        CONFIGURE_FLAGS="$CONFIGURE_FLAGS --enable-libfdk-aac --enable-encoder=libfdk_aac"
-        ECFLAGS="$ECFLAGS -I$FDK_AAC/include"
-        ELDFLAGS="$ELDFLAGS -L$FDK_AAC/lib"
-    fi
-
-    ECXXFLAGS="$ECFLAGS"
-    LDFLAGS="$ELDFLAGS"
-    
-    mkdir -p $OUTPUT_INSTALL/$ARCH
-
-    $FFMPEG_PATH/configure --prefix=$OUTPUT_INSTALL/$ARCH \
-                --arch=$ARCH \
-                --cc=$CROSS_PREFIX-gcc \
-                --cross-prefix=$CROSS_PREFIX- \
-                --nm=$CROSS_PREFIX-nm \
-                --sysroot=$PLATFORM \
-                --extra-cflags="$ECFLAGS" \
-                --extra-cxxflags="$ECXXFLAGS" \
-		        --extra-ldflags="$ELDFLAGS" \
-                $CONFIGURE_FLAGS \
-                || exit 1
-
-    make -j8 && make install && make clean
-done
-
-cd $ROOT
+echo Done

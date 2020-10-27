@@ -1,38 +1,57 @@
-#!/bin/sh
+#!/bin/bash
+
+# before run this script, need fix the build script for x264
+# follow below steps:
+# cd <path>/x264
+# curl "http://git.savannah.gnu.org/gitweb/?p=config.git;a=blob_plain;f=config.guess;hb=HEAD" > config.guess
+# sed -i 's/host_os = mingw/host_os = msys/' configure
+
+if [ $# -gt 0 -a "$1" != "x86" -a "$1" != "x86_64" ]
+then
+    echo "usage: build-lame-win.sh x86 | x86_64"
+    exit 0
+fi
+
+CWD=`pwd`
+
+SOURCE_PATH="$CWD/x264"
+OUTPUT_OBJECT="$CWD/build/win/x264/object"
+OUTPUT_INSTALL="$CWD/build/win/x264/install"
+
+rm -rf $OUTPUT_INSTALL
+
+ARCH=$1
+if [ -z "$1" ]
+then
+    ARCH="x86"
+fi
+
+build_x264() {
+    
+    echo "Building $ARCH ......"
+    mkdir -p $OUTPUT_OBJECT/$ARCH
+	cd $OUTPUT_OBJECT/$ARCH
+	
+    CC=cl $SOURCE_PATH/configure \
+                --prefix=$OUTPUT_INSTALL/$ARCH \
+                --enable-static \
+                --enable-shared || exit 1
+
+    make && make install && make clean
 
 
-# see detail https://www.roxlu.com/2016/057/compiling-x264-on-windows-with-msvc
+    cd $CWD
+}
 
-CONFIGURE_FLAGS="--disable-cli \
-				--enable-static \
-				--enable-pic \
-				--disable-opencl \
-				--bit-depth=8 \
-                --enable-strip \
-				--disable-avs \
-				--disable-swscale \
-				--disable-lavf \
-				--disable-ffms \
-				--disable-gpac \
-				--disable-lsmash"
+copy_lib() {
+	DST=$CWD/../refs/pc
+	for LIB in `find $OUTPUT_INSTALL/$ARCH -name "*.lib" -o -name "*.dll"`
+	do
+		cp -rvf $LIB $DST
+	done
+}
 
-ROOT=`pwd`
-SOURCE="x264"
-PROJECT=x264
-X264_PATH="$ROOT/$SOURCE"
+build_x264 || exit 1
+copy_lib || exit 1
 
-OUTPUT_OBJECT="$ROOT/build/win/$PROJECT/object"
-OUTPUT_INSTALL="$ROOT/build/win/$PROJECT/install"
-
-rm -rf $ROOT/build/win/$PROJECT
-mkdir -p $OUTPUT_OBJECT
-mkdir -p $OUTPUT_INSTALL
-
-cd $OUTPUT_OBJECT
-
-CC=cl $X264_PATH/configure --prefix="$OUTPUT_INSTALL" \
-    $CONFIGURE_FLAGS
-
-make && make install
-
-cd $ROOT
+echo Done
